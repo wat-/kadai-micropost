@@ -33,9 +33,4 @@ class UserFollowController extends Controller
         // 前のURLへリダイレクトさせる
         return back();
     }
-
-    public function loadRelationshipCounts()
-    {
-        $this->loadCount(['microposts', 'followings', 'followers']);
-    }
 }

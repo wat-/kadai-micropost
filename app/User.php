@@ -50,8 +50,7 @@ class User extends Authenticatable
      */
     public function loadRelationshipCounts()
     {
-        $this->loadCount('microposts');
-        $this->loadCount('favorites');
+        $this->loadCount(['microposts', 'followings', 'followers', 'favorites']);
     }
     
     /**
@@ -142,10 +141,74 @@ class User extends Authenticatable
     }
 
     /**
-     * このユーザがお気に入りしている投稿。（ Userモデルとの関係を定義）
+     * このユーザがお気に入りしている投稿。（ Micropostモデルとの関係を定義）
      */
     public function favorites()
     {
-        return $this->belongsToMany(User::class, 'favorites', 'user_id', 'micropost_id')->withTimestamps();
+        return $this->belongsToMany(Micropost::class, 'favorites', 'user_id', 'micropost_id')->withTimestamps();
+    }
+
+    /**
+     * $micropostIdで指定された投稿をお気に入りする。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function favorite($micropostId)
+    {
+        // すでにお気に入り登録しているかの確認
+        $exist = $this->is_favoriting($micropostId);
+
+        if ($exist) {
+            // すでにお気に入りに登録されていたら何もしない
+            return false;
+        } else {
+            // 未登録であれば登録する
+            $this->favorites()->attach($micropostId);
+            return true;
+        }
+    }
+
+    /**
+     * $micropostIdで指定された投稿をお気に入りから削除する。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function unfavorite($micropostId)
+    {
+        // すでにお気に入り登録しているかの確認
+        $exist = $this->is_favoriting($micropostId);
+
+        if ($exist) {
+            // お気に入りに登録されていれば削除する
+            $this->favorites()->detach($micropostId);
+            return true;
+        } else {
+            // お気に入りに登録されていなければ何もしない
+            return false;
+        }
+    }
+
+    /**
+     * 指定された $micropostIdの投稿このユーザがお気に入り登録中であるか調べる。登録中ならtrueを返す。
+     *
+     * @param  int  $micropostId
+     * @return bool
+     */
+    public function is_favoriting($micropostId)
+    {
+        // お気に入り登録一覧の中に $micropostIdのものが存在するか
+        return $this->favorites()->where('micropost_id', $micropostId)->exists();
+    }
+
+    /**
+     * このユーザとフォロー中ユーザの投稿に絞り込む。
+     */
+    public function feed_favorites_id()
+    {
+        // このユーザがお気に入り登録中の投稿のidを取得して配列にする
+        return $this->favorites()->pluck('favorites.micropost_id')->toArray();
+
     }
 }
